@@ -1,0 +1,126 @@
+---
+title: "Statistical Analysis of “Hidden Gem” Score for Movies on Netflix"
+author: "Zhizhi Wei, Samantha Zhang, Cindy He, Yutian Gu"
+date: "22/12/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+FlixGem <- read_csv(here("/Users/zhizhiwei/Downloads/Final_Project_FlixGem.csv"))
+```
+
+```{r}
+class(FlixGem)
+```
+
+```{r}
+# subsetted and cleaned data:
+FlixGem_cleaned <- FlixGem %>% filter(`Series or Movie`== "Movie") %>% drop_na()
+FlixGem_cleaned
+```
+
+## Task 1
+
+### (a)
+
+### Hidden Gem Score vs. Runtime:
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+ggplot(FlixGem_cleaned, aes(x=Runtime, y=`Hidden Gem Score`, group=Runtime, fill=Runtime)) + geom_boxplot() + labs(x="Runtime",y="Hidden Gem Score")
+```
+We can see from the boxplot that the Hidden Gem Score mean of movies of different Runtime are very close, but runtime of >2 hours tend to have a higher score of 75% quartile, while runtime of less than 30 minutes tend to have a lower one. Also the outliers of 1-2 hours movies tend to lie in the range of higher scores. Thus we can conclude that Hidden Gem Scores associates with Runtime.
+
+&nbsp;
+
+### Hidden Gem Score vs. languages:
+
+### Step1: Re-coding 'Languages'
+```{r, results='hide'}
+FlixGem_cleaned %>% pull(Languages) %>% unique(.) %>% sort(.)
+```
+
+```{r, results='hide'}
+FlixGem_cleaned %>% group_by(Languages) %>% summarize(count=n()) %>% arrange(desc(count))
+```
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+FlixGem_lang_main <- FlixGem_cleaned %>% mutate(Languages_main = word(FlixGem_cleaned$Languages,1)) %>% mutate(Languages_main_alt = recode(Languages_main, 'English,' = "English",'French,' = "French", 'Spanish,' = "Spanish", 'Korean,' = "Korean", 'Mandarin,' = "Mandarin", 'Italian,' = "Italian", 'Cantonese,' = "Cantonese", 'German,' = "German", 'Japanese,' = "Japanese", 'Hindi,' = "Hindi", 'Danish,'= "Danish", 'Norwegian,' = "Norwegian", 'Swedish,' = "Swedish", 'Czech,' = "Czech", 'Polish,' = "Polish", 'Russian,' = "Russian", 'Zulu,' = "Zulu", 'Arabic,' = "Arabic", 'Chinese,' = "Mandarin", 'Dari,' = "Dari", 'Filipino,' = "Filipino", 'Greek,' = "Greek", 'Hungarian,' = "Hungarian", 'Indonesian,' = "Indonesian", 'Neapolitan,' = "Neapolitan", 'None,' = "None", 'Persian,' = "Persian", 'Portuguese,' = "Portuguese", 'Romany,' = "Romany", 'Tamil,' = "Tamil", 'Thai,' = "Thai", 'Tswana,' = "Tswana", 'Yiddish,' = "Yiddish"))
+FlixGem_lang_main %>% group_by(Languages_main_alt) %>% summarize(count=n()) %>% arrange(desc(count))
+```
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+# Filter out Languages with counts > 5
+FlixGem_lang_main_filter <- FlixGem_lang_main %>% filter(Languages_main_alt %in% c("English","French","Spanish","Japanese","Mandarin","Korean","German","Italian","Cantonese","Hindi","Swedish","Danish","Norwegian","Portuguese"))
+FlixGem_lang_main_filter %>% group_by(Languages_main_alt) %>% summarize(count=n()) %>% arrange(desc(count))
+```
+### Step2: Plotting 'Hidden Gem Score vs. languages'
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+ggplot(FlixGem_lang_main_filter, aes(x=Languages_main_alt, y=`Hidden Gem Score`, group=Languages_main_alt, fill=Languages_main_alt)) + geom_boxplot() + labs(x="Languages",y="Hidden Gem Score") + theme(legend.key.size = unit(0.5, "cm"), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=8))
+```
+Moreover, the Hidden Gem Score seems not to have association with the language of movies. We can see from the boxplots that the mean, 25th quartile and 75th quartile range of movies of each languages are very similar, except for English and Mandarin. But these two languages' score varies widely because they have much more content and market compared to other languages. So the nature of these outliers is due to those movies' quality, not the factor of language at surface. Movies of large numbers all have different quality themselves, while audience who understand this kind of language in different market have various comments depending on cultural backgrounds etc. Thus, we can conclude that the Hidden Gem Score does not have association with the language.
+
+&nbsp;
+
+
+### (b)
+
+### Hidden Gem Scores vs. IMDb 
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+ggplot(FlixGem_cleaned, aes(x =`Hidden Gem Score`, y = `IMDb Score`)) + geom_point() + labs(x="Hidden Gem Score", y="IMDb Score")
+```
+
+### Hidden Gem Scores vs. Rotten Tomatoes Score
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+ggplot(FlixGem_cleaned, aes(x =`Hidden Gem Score`, y = `Rotten Tomatoes Score`)) + geom_point() + labs(x="Hidden Gem Score", y="Rotten Tomatoes Score")
+```
+
+### Hidden Gem Scores vs. Metacritic Score
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+ggplot(FlixGem_cleaned, aes(x =`Hidden Gem Score`, y = `Metacritic Score`)) + geom_point() + labs(x="Hidden Gem Score", y="Metacritic Score")
+```
+
+The three reviews strongly correlate to the Hidden Gem Score from the three plots. We can see that the dots all form a linear relationship between each review and the Hidden Gem Score, indicating that as the Hidden Gem Score increases, the review increases along with it. By nature, they all reflect the general quality of a movie and they make relatively fair comments. The quality of a movie is consistent.
+
+&nbsp;
+
+### (c)
+
+```{r}
+library(lubridate)
+```
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+
+Release_Date_year <- rep(0,length(FlixGem_cleaned$`Release Date`))
+
+for(i in seq_along(FlixGem_cleaned$`Release Date`)){
+  Release_Date_year[i] = year(as.POSIXlt(FlixGem_cleaned$`Release Date`[i], format="%Y-%m-%d"))
+}
+
+FlixGem_cleaned <- FlixGem_cleaned %>% mutate(Release_Date_year = Release_Date_year)
+
+```
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+Avg_HG_by_year_runtime <- FlixGem_cleaned %>% group_by(Runtime, Release_Date_year) %>% summarise(Avg_HG_score = mean(`Hidden Gem Score`))
+Avg_HG_by_year_runtime
+```
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+ggplot(Avg_HG_by_year_runtime, aes(x=factor(Release_Date_year), y=Avg_HG_score, group=factor(Runtime), col=factor(Runtime))) + geom_line() + geom_point() + labs(x="Release year",y="Average Hidden Gem score",col="Runtime") + theme(legend.key.size = unit(0.5, "cm"), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),text = element_text(size=8))
+```
+&nbsp;
+
+From the plots we can see that the average Hidden Gem Score of movies of 1-2 hours and >2 hours keep changing on a smaller range, while that of movies of <30 minutes changes dramatically especially during 1977-1997 (although it might be resulted from the lack of data). Movie >2 hours's average Score generally remain as a leading one in a long term. Since 2015, people seem to prefer longer movies. Longer movies' Score are increasing and 1-2 hours movies' Score increase faster than that of >2 hours movies. Thus it seems like people are more accepting to longer movies.
+
