@@ -1,0 +1,91 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+FlixGem <- read_csv(here("/Users/zhizhiwei/Downloads/Final_Project_FlixGem.csv"))
+```
+
+&nbsp;
+
+## Task 3:
+
+### Clean data again (only drop NAs for directors, Hidden gem score and title):
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+FlixGem_cleaned_task3 <- FlixGem %>% filter(`Series or Movie`== "Movie") %>% drop_na(Director,`Hidden Gem Score`,Title)
+```
+
+&nbsp;
+
+### Select Directors, Movie title and HG-score out:
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
+FlixGem_cleaned_HG <- FlixGem_cleaned_task3 %>% group_by(Director,Title) %>% select(Director,Title,`Hidden Gem Score`) %>% arrange(Director)
+```
+
+&nbsp;
+
+### Split a list for each director:
+```{r}
+FlixGem_cleaned_HG_split <- with(FlixGem_cleaned_HG, split(FlixGem_cleaned_HG,Director))
+```
+
+```{r}
+length(FlixGem_cleaned_HG_split)
+```
+
+&nbsp;
+
+### Function that takes in a director's list and return his/her HG-H index:
+```{r}
+calculate_HG_H_for_sapply <- function(each_director_list){
+    H <- 0
+    for(i in seq_along(each_director_list$`Hidden Gem Score`)){
+      if(each_director_list$`Hidden Gem Score`[i]>=i){
+        H<-H+1
+      }
+    }
+    return(H)
+}
+```
+
+&nbsp;
+
+### Apply the function to the splitted list and returns the vector containing HG-H scores for all directors:
+```{r}
+HG_H_index_vec <-sapply(FlixGem_cleaned_HG_split, calculate_HG_H_for_sapply)
+```
+
+&nbsp;
+
+### Convert the vector to a tibble:
+```{r}
+all_HG_H_index <-as.tibble(HG_H_index_vec)
+```
+
+&nbsp;
+
+### Combine the Director names and their HG-H scores into one tibble:
+```{r}
+Director_name_tibble <- FlixGem_cleaned_HG[,1] %>% unique(.)
+
+combined_name_H_index <- bind_cols(Director_name_tibble, all_HG_H_index)
+```
+
+
+&nbsp;
+
+### Find the top 10 directors according to their HG-H index:
+```{r}
+top_10 <- combined_name_H_index %>% arrange(desc(value)) %>% head(10)
+colnames(top_10) <- c("Director","HG-H-index")
+top_10
+```
+
